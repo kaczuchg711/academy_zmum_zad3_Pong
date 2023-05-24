@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from keras.models import Sequential
 from keras.layers import Dense
-
+from skimage.color import rgb2gray
 # Define the Pong agent class
 class PongAgent:
     def __init__(self, input_size, output_size):
@@ -41,9 +41,20 @@ agent = PongAgent(input_size, output_size)
 def render_frame(env):
     plt.imshow(env.ale.getScreenRGB())
     plt.pause(0.001)
+def render_frame2(observation):
+    plt.imshow(observation)
+    plt.axis('off')
+    plt.show()
 
+def cut_end_convert_to_bw(observation, threshold=80):
+    # observation = observation[35:-35, :, :]
+    bw_observation = np.zeros_like(observation, dtype=np.uint8)
+    grayscale = np.sum(observation, axis=2) // 3
+    bw_observation[grayscale < threshold] = [0, 0, 0]  # Set pixels below threshold to black
+    bw_observation[grayscale >= threshold] = [255, 255, 255]  # Set pixels above threshold to white
+    return bw_observation
 # Training loop
-for episode in range(1000):
+for episode in range(5):
     episode_reward = 0
     done = False
 
@@ -51,15 +62,13 @@ for episode in range(1000):
     observation, reward, done = env.step(0)[:3]
 
     while not done:
-        render_frame(env)  # Custom rendering function
-
+        # render_frame(env)
         action = agent.choose_action(observation)
         observation, reward, done = env.step(action)[:3]
         episode_reward += reward
-
-        # Update the agent's model
+        observation = cut_end_convert_to_bw(observation)
+        render_frame2(observation)
         agent.model.fit(np.reshape(observation, [1, -1]), np.eye(output_size)[action:action+1], verbose=0)
-    # Print the episode reward
     print(f"Episode {episode + 1}: Reward = {episode_reward}")
 
 env.close()
